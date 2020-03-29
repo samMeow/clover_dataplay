@@ -41,7 +41,7 @@ func main() {
 	queryer := &database.QueryerImpl{}
 	parserFactory := parser.NewDataParserFactory(currentDir + "/specs/")
 	sqlWorker := &worker.SQLWorker{
-		DB:            db,
+		DB:            db.Conn(),
 		ParserFactory: parserFactory,
 		Queryer:       queryer,
 		BufferSize:    50,
@@ -82,8 +82,8 @@ jobloop:
 		}
 	}
 
-	fmt.Println("Done")
 	close(jobChan)
 	wg.Wait()
+	fmt.Println("Done")
 	close(closeChan)
 }

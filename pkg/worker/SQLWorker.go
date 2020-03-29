@@ -14,7 +14,7 @@ import (
 
 type SQLWorker struct {
 	ParserFactory parser.DataParserFactory
-	DB            *database.PostgresDB
+	DB            *sqlx.DB
 	Queryer       database.Queryer
 	BufferSize    int
 }
@@ -23,7 +23,7 @@ func (f *SQLWorker) safeInsertData(cancelContext context.Context, modelName stri
 	var tx *sqlx.Tx
 	var err error
 
-	tx, err = f.DB.Conn().BeginTxx(cancelContext, nil)
+	tx, err = f.DB.BeginTxx(cancelContext, nil)
 	if err != nil {
 		return fmt.Errorf("Fail to create Transaction, %v", err)
 	}
@@ -40,10 +40,9 @@ func (f *SQLWorker) safeInsertData(cancelContext context.Context, modelName stri
 	return nil
 }
 
-func (f *SQLWorker) RunInputJob(cancelContext context.Context, dataFile string) error {
+func (f *SQLWorker) runInputJob(cancelContext context.Context, dataFile string) error {
 	var err error
-	var p *parser.DataParser
-	var conn *sqlx.DB
+	var p parser.DataParser
 
 	// assume only one _
 	modelName := strings.Split(filepath.Base(dataFile), "_")[0]
@@ -53,15 +52,12 @@ func (f *SQLWorker) RunInputJob(cancelContext context.Context, dataFile string) 
 		return err
 	}
 
-	conn = f.DB.Conn()
-
 	select {
 	case <-cancelContext.Done():
 		return fmt.Errorf("Canceled before create Table %s", modelName)
 	default:
-		err = f.Queryer.CreateTable(conn, modelName, p.Metas)
+		err = f.Queryer.CreateTable(f.DB, modelName, p.Meta())
 	}
-	err = f.Queryer.CreateTable(conn, modelName, p.Metas)
 	if err != nil {
 		return err
 	}
@@ -122,7 +118,7 @@ func (f *SQLWorker) Start(jobChan <-chan string, wg *sync.WaitGroup, cancelConte
 		if !ok {
 			return
 		}
-		err := f.RunInputJob(cancelContext, job)
+		err := f.runInputJob(cancelContext, job)
 		if err != nil {
 			fmt.Println(err)
 		}

@@ -2,12 +2,18 @@ package parser
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
 )
 
-type DataParser struct {
+type DataParser interface {
+	Parse(filePath string) (*DataScanner, error)
+	Meta() []*SQLMeta
+}
+
+type DataParserImpl struct {
 	Metas []*SQLMeta
 }
 
@@ -17,13 +23,13 @@ type DataScanner struct {
 	Scanner *bufio.Scanner
 }
 
-func NewDataParser(metas []*SQLMeta) *DataParser {
-	return &DataParser{
+func NewDataParser(metas []*SQLMeta) DataParser {
+	return &DataParserImpl{
 		Metas: metas,
 	}
 }
 
-func (dp *DataParser) Parse(filePath string) (*DataScanner, error) {
+func (dp *DataParserImpl) Parse(filePath string) (*DataScanner, error) {
 	var file *os.File
 	var err error
 	file, err = os.Open(filePath)
@@ -36,6 +42,10 @@ func (dp *DataParser) Parse(filePath string) (*DataScanner, error) {
 		file:    file,
 		Scanner: bufio.NewScanner(file),
 	}, nil
+}
+
+func (dp *DataParserImpl) Meta() []*SQLMeta {
+	return dp.Metas
 }
 
 func (ds *DataScanner) ReadRow() (*map[string]interface{}, bool, error) {
@@ -51,6 +61,9 @@ func (ds *DataScanner) ReadRow() (*map[string]interface{}, bool, error) {
 	row := ds.Scanner.Text()
 	remain := []rune(row)
 	for _, meta := range ds.Metas {
+		if len(remain) < meta.Size {
+			return nil, true, fmt.Errorf("not enough length of data")
+		}
 		raw := remain[0:meta.Size]
 		datum, err := parseData(string(raw), meta.DataType)
 		if err != nil {

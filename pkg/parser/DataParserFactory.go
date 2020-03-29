@@ -3,7 +3,7 @@ package parser
 import "sync"
 
 type DataParserFactory interface {
-	MakeParser(modelName string) (*DataParser, error)
+	MakeParser(modelName string) (DataParser, error)
 }
 
 var singleton *DataParserFactoryImpl = nil
@@ -24,10 +24,10 @@ func NewDataParserFactory(specDir string) DataParserFactory {
 	return singleton
 }
 
-func (dpf *DataParserFactoryImpl) MakeParser(modelName string) (*DataParser, error) {
+func (dpf *DataParserFactoryImpl) MakeParser(modelName string) (DataParser, error) {
 	var err error
 	if parser, ok := dpf.Cache.Load(modelName); ok {
-		return parser.(*DataParser), nil
+		return parser.(DataParser), nil
 	}
 	specFile := dpf.SpecDir + modelName + ".csv"
 	var meta []*SQLMeta
