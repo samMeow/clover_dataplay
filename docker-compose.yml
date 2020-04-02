@@ -1,20 +1,6 @@
 version: '3.1'
 
 services:
-  dataplay-backend:
-    image: golang:1.13
-    container_name: dataplay-backend
-    ports:
-      - 8080:8080
-    volumes:
-      - .:/application
-      - /application/data
-    depends_on:
-      - dataplay-db
-    networks:
-      - dataplay-network
-    working_dir: /application
-    command: go run .
   dataplay-db:
     image: postgres:12
     container_name: dataplay-db
@@ -26,10 +12,3 @@ services:
       POSTGRES_DB: dataplay
     volumes:
       - ./pgdata:/var/lib/postgresql/data
-    networks:
-      - dataplay-network
-
-networks:
-  dataplay-network:
-    external:
-      name: dataplay-network
